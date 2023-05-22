@@ -35,6 +35,7 @@ function processNextBatch() {
     membersResponse.forEach((member) => {
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
 
+      
       if (daysActive > daysSinceLastActive) {
         const revokeEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
         const data = { memberId: member.id };
