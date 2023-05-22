@@ -15,7 +15,6 @@ const headers = { 'Accept': 'application/json' };
 
 let membersAssigned = 0;
 
-
 function processNextBatch() {
   const getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}`;
 
