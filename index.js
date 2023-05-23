@@ -53,7 +53,6 @@ function processNextBatch() {
         membersSkipped +=1;
       }
     });
-    console.log(lastMemberIndex);
     lastMemberIndex += membersSkipped + 1;
     setTimeout(processNextBatch, 5000);
   });
