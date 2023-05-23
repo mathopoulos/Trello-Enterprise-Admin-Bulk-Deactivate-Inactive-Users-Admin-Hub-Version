@@ -19,20 +19,16 @@ let lastMemberIndex = 0;
 
 function processNextBatch() {
   let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
-  console.log(membersSkipped);
-  console.log(batchCount);
   if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
   };
-  console.log(getManagedMembersUrl);
   request.get({
     url: getManagedMembersUrl,
     headers: headers,
     json: true
   }, (error, response, body) => {
     const membersResponse = body;
-    console.log(membersResponse);
     console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
       console.log("No more members to process");
