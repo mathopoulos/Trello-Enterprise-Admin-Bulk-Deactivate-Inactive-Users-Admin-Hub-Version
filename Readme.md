@@ -1,6 +1,9 @@
 ## Trello Admin User Management Scripts
 
-This is an open source set of scripts to help you bulk managed your Trello users using the Trello API. Included: 
+This is an open source script to help Trelle Enterprise members bulk deactivate members who have not been active in the last X days. You can customize how you define active. For more details on how exactly to use this script, see this video below: 
+
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/GwvZ0KWFiCM/0.jpg)](https://www.youtube.com/watch?v=GwvZ0KWFiCM) 
+
 
 ---
 ### User Paramaters 
