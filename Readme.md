@@ -28,3 +28,6 @@ In addition there are 5 customizations that the user can customize if they would
 - **daysSinceLastActive** - This variable defines how you want to define activity. By default this is set to 90 days. 
 
 - **batchCount** - This variable allows you to define how many users you want to give Enterprise seats at once. When first testing this script we recommend setting this to 5 to confirm that it is running correctly and then setting this value to 100.
+
+## Have Questions?
+Post on the Atlassian Community [here](https://community.atlassian.com/t5/Trello/ct-p/trello). 
