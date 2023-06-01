@@ -60,7 +60,7 @@ function processNextBatch() {
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
       if (testRun === false) {
         console.log(`No more members to process, All done!`);} 
-      else {console.log(`No more members to process, Test all done!`)};
+      else {console.log(`No more members to process, Test all done! ${membersAssigned} would have been deactivated if not in test mode`)};
       return;
     }
     membersResponse.forEach((member) => {
@@ -78,7 +78,7 @@ function processNextBatch() {
           membersAssigned += 1;
           const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-          console.log(`Deactivated enterprise member: ${member.fullName}.`);
+          console.log(`Deactivated enterprise member: ${member.fullName}. Have now deactivated a total of ${membersAssigned} Enterprise members.`);
         });
       } else {
         const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
@@ -91,7 +91,7 @@ fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n')
         const data = { memberId: member.id };
         const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        console.log(`[TEST MODE] Deactivated enterprise member: ${member.fullName}.`);
+        console.log(`[TEST MODE] Deactivated enterprise member: ${member.fullName}. Have now deactivated a total of ${membersAssigned} Enterprise members.`);
 
       } else {
         const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
