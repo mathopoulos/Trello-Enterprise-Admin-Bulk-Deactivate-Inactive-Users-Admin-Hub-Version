@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/node": "^18.0.6",
+    "csv-parse": "^5.4.0",
     "moment": "^2.29.4",
     "node-fetch": "^3.2.6",
     "request": "^2.88.2"
