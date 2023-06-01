@@ -9,6 +9,9 @@ const daysSinceLastActive = 90; //set this to the maximum number of days since l
 // set the batch count to be retrieved in each batch. The default value is 5.
 const batchCount = 5;
 
+const testRun = true // if this value is set to true, the script will simulate deactivating inactive users but will not actually deactivate them. Set to false if you would like to actually deactivate users. 
+
+
 
 //------------------------------------------------------------------------------------------------------------
 //REQUIRED authintication credentials
@@ -26,9 +29,23 @@ const headers = { 'Accept': 'application/json' };
 const request = require('request');
 const moment = require('moment');
 const process = require('process');
+const fs = require('fs');
+const parse = require('csv-parse');
+const timestamp = moment().format("YYYY-MM-DD-HHmmss")
+
+let membersAssigned = 0;
+let membersSkipped = 0;
+let lastMemberIndex = 0; 
+
+const csvHeaders = [['Member Full Name', 'Days Since Last Active', 'Last Active', 'User Deactivated']];
+fs.writeFileSync(`member_report_${timestamp}.csv`, '');
+csvHeaders.forEach((header) => {
+    fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
+});
+
 
 function processNextBatch() {
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=username,fullName,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
   if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
@@ -39,13 +56,16 @@ function processNextBatch() {
     json: true
   }, (error, response, body) => {
     const membersResponse = body;
-    console.log(`Pulled our batch of ${membersResponse.length} members. Starting to give them Enterprise seats now...`);
+    console.log(`Pulled our batch of ${membersResponse.length} members. Starting to deactivate inactive members now...`);
     if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
-      console.log("No more members to process");
+      if (testRun === false) {
+        console.log(`No more members to process, All done!`);} 
+      else {console.log(`No more members to process, Test all done!`)};
       return;
     }
     membersResponse.forEach((member) => {
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
+      if (testRun === false) {
       if (daysActive > daysSinceLastActive) {
         const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
         const data = { memberId: member.id };
@@ -56,13 +76,30 @@ function processNextBatch() {
         }, (error, response, body) => {
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
-          console.log(`Gave an Enterprise Seat to member: ${member.username}. Have now assigned a total of ${membersAssigned} Enterprise seats.`);
+          const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+          console.log(`Deactivated enterprise member: ${member.fullName}.`);
         });
       } else {
-        console.log(`${member.username} has not been active so we did not give them an Enterprise Seat.`);
+        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+        console.log(`${member.fullName} has been active so we did not deactivate their account.`);
+        membersSkipped +=1;
+      }});
+        if (testRun === true) {
+      if (daysActive > daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
+        const data = { memberId: member.id };
+        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+        console.log(`[TEST MODE] Deactivated enterprise member: ${member.fullName}.`);
+
+      } else {
+        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
+fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+        console.log(`[TEST MODE] ${member.fullName} has been active so we did not deactivate their account.`);
         membersSkipped +=1;
       }
-    });
+    }});
     lastMemberIndex += membersSkipped + 1;
     setTimeout(processNextBatch, 5000);
   });
