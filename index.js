@@ -85,9 +85,9 @@ fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n')
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`${member.fullName} has been active so we did not deactivate their account.`);
         membersSkipped +=1;
-      }});
+      }};
         if (testRun === true) {
-      if (daysActive > daysSinceLastActive && !member.idEnterprisesDeactivated.length) { 
+      if (daysActive > daysSinceLastActive) { 
         const data = { memberId: member.id };
         const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
