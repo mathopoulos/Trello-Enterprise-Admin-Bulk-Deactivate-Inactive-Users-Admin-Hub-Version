@@ -37,7 +37,7 @@ let membersAssigned = 0;
 let membersSkipped = 0;
 let lastMemberIndex = 0; 
 
-const csvHeaders = [['Member Full Name', 'Days Since Last Active', 'Last Active', 'User Deactivated']];
+const csvHeaders = [['Member Email','Member Full Name', 'Days Since Last Active', 'Last Active', 'User Deactivated']];
 fs.writeFileSync(`member_report_${timestamp}.csv`, '');
 csvHeaders.forEach((header) => {
     fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
@@ -45,7 +45,7 @@ csvHeaders.forEach((header) => {
 
 
 function processNextBatch() {
-  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=username,fullName,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=username,fullName,memberEmail,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
   if (membersSkipped > 0) {
     getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
     membersSkipped=0;
@@ -76,12 +76,12 @@ function processNextBatch() {
         }, (error, response, body) => {
           const licensedResponse = JSON.parse(body);
           membersAssigned += 1;
-          const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
+          const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
           console.log(`Deactivated enterprise member: ${member.fullName}. Have now deactivated a total of ${membersAssigned} Enterprise members.`);
         });
       } else {
-        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
+        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`${member.fullName} has been active so we did not deactivate their account.`);
         membersSkipped +=1;
@@ -89,12 +89,12 @@ fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n')
         if (testRun === true) {
       if (daysActive > daysSinceLastActive) { 
         const data = { memberId: member.id };
-        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
+        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`[TEST MODE] Deactivated enterprise member: ${member.fullName}. Have now deactivated a total of ${membersAssigned} Enterprise members.`);
 
       } else {
-        const rowData = [[member.fullName, daysActive, member.dateLastAccessed, 'No']];
+        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
 fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
         console.log(`[TEST MODE] ${member.fullName} has been active so we did not deactivate their account.`);
         membersSkipped +=1;
