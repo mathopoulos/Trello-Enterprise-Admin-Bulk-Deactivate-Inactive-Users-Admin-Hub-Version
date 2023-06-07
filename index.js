@@ -63,7 +63,10 @@ function processNextBatch() {
       else {console.log(`No more members to process, Test all done! ${membersAssigned} would have been deactivated if not in test mode`)};
       return;
     }
+    const processedEmails = new Set();
     membersResponse.forEach((member) => {
+      if (!processedEmails.has(member.memberEmail)) {
+        processedEmails.add(member.memberEmail);
       const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
       if (testRun === false) {
       if (daysActive > daysSinceLastActive) {
@@ -99,7 +102,7 @@ fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n')
         console.log(`[TEST MODE] ${member.fullName} has been active so we did not deactivate their account.`);
         membersSkipped +=1;
       }
-    }});
+   } }});
     lastMemberIndex += membersSkipped + 1;
     setTimeout(processNextBatch, 5000);
   });
