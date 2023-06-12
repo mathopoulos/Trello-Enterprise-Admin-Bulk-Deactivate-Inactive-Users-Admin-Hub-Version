@@ -32,93 +32,124 @@ const process = require('process');
 const fs = require('fs');
 const parse = require('csv-parse');
 const timestamp = moment().format("YYYY-MM-DD-HHmmss")
-
-let membersAssigned = 0;
-let membersSkipped = 0;
-let lastMemberIndex = 0; 
-
-const csvHeaders = [['Member Email','Member Full Name', 'Days Since Last Active', 'Last Active', 'User Deactivated']];
-fs.writeFileSync(`member_report_${timestamp}.csv`, '');
-csvHeaders.forEach((header) => {
-    fs.appendFileSync(`member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
-});
+let pulledBatches = 0; 
 
 
-function processNextBatch() {
-  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=username,fullName,memberEmail,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
-  if (membersSkipped > 0) {
-    getManagedMembersUrl = getManagedMembersUrl + `&startIndex=${lastMemberIndex}`;
-    membersSkipped=0;
-  };
-  request.get({
-    url: getManagedMembersUrl,
-    headers: headers,
-    json: true
-  }, (error, response, body) => {
-    const membersResponse = body;
-    console.log(`Pulled our batch of ${membersResponse.length} members. Starting to deactivate inactive members now...`);
-    if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
-      if (testRun === false) {
-        console.log(`No more members to process, All done!`);} 
-      else {console.log(`No more members to process, Test all done! ${membersAssigned} would have been deactivated if not in test mode`)};
-      return;
-    }
-    const processedEmails = new Set();
-    membersResponse.forEach((member) => {
-      if (!processedEmails.has(member.memberEmail)) {
-        processedEmails.add(member.memberEmail);
-      const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
-      if (testRun === false) {
-      if (daysActive > daysSinceLastActive) {
-        const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${member.id}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
-        const data = { memberId: member.id };
-        request.put({
-          url: giveEnterpriseSeatUrl,
-          headers: headers,
-          form: data
-        }, (error, response, body) => {
-          const licensedResponse = JSON.parse(body);
-          membersAssigned += 1;
-          const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-          console.log(`Deactivated enterprise member: ${member.fullName}. Have now deactivated a total of ${membersAssigned} Enterprise members.`);
-        });
-      } else {
-        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        console.log(`${member.fullName} has been active so we did not deactivate their account.`);
-        membersSkipped +=1;
-      }};
-        if (testRun === true) {
-      if (daysActive > daysSinceLastActive) { 
-        const data = { memberId: member.id };
-        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'Yes']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        console.log(`[TEST MODE] Deactivated enterprise member: ${member.fullName}. Have now deactivated a total of ${membersAssigned} Enterprise members.`);
 
-      } else {
-        const rowData = [[member.memberEmail, member.fullName, daysActive, member.dateLastAccessed, 'No']];
-fs.appendFileSync(`member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
-        console.log(`[TEST MODE] ${member.fullName} has been active so we did not deactivate their account.`);
-        membersSkipped +=1;
-      }
-   } }});
-    lastMemberIndex += membersSkipped + 1;
-    setTimeout(processNextBatch, 5000);
+function putTogetherReport() {
+  //creates csv file where where report will be stored 
+  const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Deactivation']];
+
+  fs.writeFileSync(`pre_run_member_report_${timestamp}.csv`, '');
+
+  csvHeaders.forEach((header) => {
+    fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, header.join(', ') + '\r\n');
   });
+
+  // API endpoint to get list of Free Members
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+
+  function processNextBatch(startIndex) {
+    let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
+
+    request.get({
+      url: getNextBatchUrl,
+      headers,
+      json: true
+    }, (error, response, body) => {
+      const membersResponse = body;
+      pulledBatches = pulledBatches + 1;
+      console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
+      if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
+        if (testRun === false) {
+          console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start deactivating inactive users...`);
+          beginGivingSeats();
+        }
+        else { console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`) };
+        return;
+      }
+      membersResponse.forEach((member) => {
+        const daysActive = moment().diff(moment(member.dateLastAccessed), 'days');
+        let eligible = ""
+        if (daysActive > daysSinceLastActive) {eligible = "Yes"} else {eligible = "No"};
+        const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed,eligible];
+        fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
+      });
+      processNextBatch(startIndex + batchCount);
+    });
+  }
+
+  processNextBatch(1);
 }
+              
+
+function beginGivingSeats() {
+  const post_timestamp = moment().format("YYYY-MM-DD-HHmmss")
+  //creates csv file where where report will be stored 
+  const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Deactivation', 'Deactivated']];
+  fs.writeFileSync(`post_run_member_report_${post_timestamp}.csv`, '');
+  
+  post_csvHeaders.forEach((header) => {
+      fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, header.join(', ') + '\r\n');
+    });
+  
+  // read pre csv file
+  const pre_csvData = fs.readFileSync(`pre_run_member_report_${timestamp}.csv`, "utf-8");
+
+
+  // split csv rows into an array
+  const pre_rows = pre_csvData.trim().split(/\r?\n/);
+
+  // process each row
+   pre_rows.forEach((pre_row, i) => {
+    const cols = pre_row.split(",");
+    const email = cols[0];
+    const memberId = cols[1].trim();
+    const daysActive = parseInt(cols[3]);
+    
+    const fullName = cols[2];
+    const lastAccessed = cols[4];
+    const isEligible = cols[5];
+    if (daysActive > daysSinceLastActive) {
+      setTimeout(() => {
+        if (!testRun) {
+          const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
+          const data = { memberId:memberId };
+           
+          request.put({
+            url: giveEnterpriseSeatUrl,
+            headers: headers,
+            form: data, 
+          }, (error, response, body) => {
+            if (!error && response.statusCode ===200) {
+              console.log(`Deactivated member: ${fullName} with email ${email}`);
+              const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
+              fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+            } else {
+              console.log(`There was an error deactivating ${email}: ${body}`)
+            }
+          });
+        }
+      }, i * 500);
+    } else {
+      const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
+      fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+
+    }
+  });
+};
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
 if (runOnlyOnce) {
-  console.log('Running script one time only');
-  processNextBatch();
+  console.log('Running script one time only.');
+  putTogetherReport();
 
 } else {
   console.log(`Running script automatically every ${intervalDays} days`);
   cron.schedule(`0 0 1 */${intervalDays} * *`, () => {
     console.log(`Running script automatically every ${intervalDays} days`);
-    processNextBatch();
+    putTogetherReport();
   });
   // run the job once on startup
-  processNextBatch();
+  putTogetherReport();
 }
