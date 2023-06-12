@@ -141,13 +141,13 @@ function beginGivingSeats() {
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
 if (runOnlyOnce) {
-  console.log('Running script one time only.');
+  console.log('Running bulk deactivation script one time only.');
   putTogetherReport();
 
 } else {
-  console.log(`Running script automatically every ${intervalDays} days`);
+  console.log(`Running bulk deactivation script automatically every ${intervalDays} days`);
   cron.schedule(`0 0 1 */${intervalDays} * *`, () => {
-    console.log(`Running script automatically every ${intervalDays} days`);
+    console.log(`Running bulk deactivation script automatically every ${intervalDays} days`);
     putTogetherReport();
   });
   // run the job once on startup
