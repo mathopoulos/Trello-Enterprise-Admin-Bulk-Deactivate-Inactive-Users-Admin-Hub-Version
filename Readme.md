@@ -29,5 +29,11 @@ In addition there are 5 customizations that the user can customize if they would
 
 - **batchCount** - This variable allows you to define how many users you want to give Enterprise seats at once. When first testing this script we recommend setting this to 5 to confirm that it is running correctly and then setting this value to 100.
 
+---
+### Outputs
+When this script is run, it will output two different report files:
+- **Pre-run member report** - This is the CSV file that is generated before any members are actually given Enterprise seats. Review this report if you have set your testRun value to true.
+- **Post-run member report** - This is the CSV file that is generated after to keep track of every user who has been given an enterprise seat. Reviewt his report to understand which users where given a seat after the script is done running. This report is is only generated if testRun is set to false.
+
 ## Have Questions?
 Post on the Atlassian Community [here](https://community.atlassian.com/t5/Trello/ct-p/trello) and tag @Alexandros Mathopoulos. 
