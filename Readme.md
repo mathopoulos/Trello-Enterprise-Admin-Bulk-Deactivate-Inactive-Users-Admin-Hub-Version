@@ -20,6 +20,7 @@ There are 3 variables that the user must input for the script to work:
  
 
 In addition there are 5 customizations that the user can customize if they would like: 
+- **testRun** - This script has a testRun mode. When testRun is set to true, the script will simulate deactivating members and give you a pre_run csv report but will not actually deactivate any members. When testRun is set to false, it will actually deactivate members who meet your activity paramaters (see below).
 
 - **runOnlyOnce** - This script can be configured to run 1x or if they user would like, run every X number of days. Set this value to true to run only once and false to run every X number of days. 
 
@@ -32,8 +33,8 @@ In addition there are 5 customizations that the user can customize if they would
 ---
 ### Outputs
 When this script is run, it will output two different report files:
-- **Pre-run member report** - This is the CSV file that is generated before any members are actually given Enterprise seats. Review this report if you have set your testRun value to true.
-- **Post-run member report** - This is the CSV file that is generated after to keep track of every user who has been given an enterprise seat. Reviewt his report to understand which users where given a seat after the script is done running. This report is is only generated if testRun is set to false.
+- **Pre-run member report** - This is the CSV file that is generated before any members are deactivated. Review this report if you have set your testRun value to true.
+- **Post-run member report** - This is the CSV file that is generated after to keep track of every user who has been deactivated. Review his report to understand which users where given a seat after the script is done running. This report is is only generated if testRun is set to false.
 
 ## Have Questions?
 Post on the Atlassian Community [here](https://community.atlassian.com/t5/Trello/ct-p/trello) and tag @Alexandros Mathopoulos. 
