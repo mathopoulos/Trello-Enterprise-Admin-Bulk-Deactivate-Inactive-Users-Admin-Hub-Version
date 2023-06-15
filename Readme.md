@@ -19,7 +19,7 @@ There are 3 variables that the user must input for the script to work:
 
  
 
-In addition there are 5 customizations that the user can customize if they would like: 
+In addition there are 6 customizations that the user can customize if they would like: 
 - **testRun** - This script has a testRun mode. When testRun is set to true, the script will simulate deactivating members and give you a pre_run csv report but will not actually deactivate any members. When testRun is set to false, it will actually deactivate members who meet your activity paramaters (see below).
 
 - **runOnlyOnce** - This script can be configured to run 1x or if they user would like, run every X number of days. Set this value to true to run only once and false to run every X number of days. 
@@ -29,6 +29,9 @@ In addition there are 5 customizations that the user can customize if they would
 - **daysSinceLastActive** - This variable defines how you want to define activity. By default this is set to 90 days. 
 
 - **batchCount** - This variable allows you to define how many users you want to give Enterprise seats at once. When first testing this script we recommend setting this to 5 to confirm that it is running correctly and then setting this value to 100.
+
+- **Remove From Enterprise** - if this value is set to true then a user will be deactivated and then also removed from the Enterprise (aka become a Free member)
+
 
 ---
 ### Outputs
