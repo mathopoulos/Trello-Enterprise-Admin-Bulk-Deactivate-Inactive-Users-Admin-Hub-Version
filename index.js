@@ -11,6 +11,7 @@ const batchCount = 5;
 
 const testRun = true // if this value is set to true, the script will simulate deactivating inactive users but will not actually deactivate them. Set to false if you would like to actually deactivate users. 
 
+const removeFromEnterprise = false; // if this value is set to true then a user will be deactivated and then also removed from the Enterprise (aka become a Free member)
 
 
 //------------------------------------------------------------------------------------------------------------
@@ -85,8 +86,8 @@ function putTogetherReport() {
 
 function beginGivingSeats() {
   const post_timestamp = moment().format("YYYY-MM-DD-HHmmss")
-  //creates csv file where where report will be stored 
-  const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Deactivation', 'Deactivated']];
+  // creates csv file where where report will be stored 
+  const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Deactivation', 'Deactivated', 'Removed From Enterprise']];
   fs.writeFileSync(`post_run_member_report_${post_timestamp}.csv`, '');
   
   post_csvHeaders.forEach((header) => {
@@ -95,7 +96,6 @@ function beginGivingSeats() {
   
   // read pre csv file
   const pre_csvData = fs.readFileSync(`pre_run_member_report_${timestamp}.csv`, "utf-8");
-
 
   // split csv rows into an array
   const pre_rows = pre_csvData.trim().split(/\r?\n/);
@@ -123,8 +123,28 @@ function beginGivingSeats() {
           }, (error, response, body) => {
             if (!error && response.statusCode ===200) {
               console.log(`Deactivated member: ${fullName} with email ${email}`);
-              const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
+             if(removeFromEnterprise) {
+              // Now, after successfully deactivating the user, we can remove them from the enterprise
+              const removeFromEnterpriseUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/?key=${apiKey}&token=${apiToken}`;
+              request.delete({
+                url: removeFromEnterpriseUrl,
+                headers: headers,
+                form: data, 
+              }, (err, res, body) => {
+                let removedFromEnterprise = "No";
+                if (!err && res.statusCode ===200) {
+                  console.log(`Removed deactivated member from the Enterprise: ${fullName} with email ${email}`);
+                  removedFromEnterprise = "Yes";
+                } else {
+                  console.log(`There was an error removing ${email} from the enterprise: ${body}`)
+                }
+                const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes', removedFromEnterprise];
+                fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+              });
+            } else {
+              const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes', "No"];
               fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+            }
             } else {
               console.log(`There was an error deactivating ${email}: ${body}`)
             }
@@ -134,7 +154,6 @@ function beginGivingSeats() {
     } else {
       const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
       fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
-
     }
   });
 };
