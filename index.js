@@ -50,23 +50,25 @@ function putTogetherReport() {
   // API endpoint to get list of Free Members
   let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
-  function processNextBatch(startIndex) {
+  async function processNextBatch(startIndex) {
+    return new Promise((resolve, reject) => {
     let getNextBatchUrl = `${getManagedMembersUrl}&startIndex=${startIndex}`;
 
     request.get({
       url: getNextBatchUrl,
       headers,
       json: true
-    }, (error, response, body) => {
+    }, async (error, response, body) => {
       const membersResponse = body;
       pulledBatches = pulledBatches + 1;
       console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
       if (!Array.isArray(membersResponse) || membersResponse.length === 0) {
         if (testRun === false) {
           console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start deactivating inactive users...`);
-          beginGivingSeats();
+          beginDeactivatingUsers();
         }
         else { console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`) };
+        resolve();
         return;
       }
       membersResponse.forEach((member) => {
@@ -76,15 +78,17 @@ function putTogetherReport() {
         const rowData = [member.memberEmail, member.id, member.fullName, daysActive, member.dateLastAccessed,eligible];
         fs.appendFileSync(`pre_run_member_report_${timestamp}.csv`, rowData.join(', ') + '\r\n');
       });
-      processNextBatch(startIndex + batchCount);
+      await processNextBatch(startIndex + batchCount);
+      resolve();
     });
+    });  
   }
 
   processNextBatch(1);
 }
               
 
-function beginGivingSeats() {
+function beginDeactivatingUsers() {
   const post_timestamp = moment().format("YYYY-MM-DD-HHmmss")
   // creates csv file where where report will be stored 
   const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Deactivation', 'Deactivated', 'Removed From Enterprise']];
