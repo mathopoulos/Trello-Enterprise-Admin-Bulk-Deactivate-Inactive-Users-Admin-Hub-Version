@@ -7,7 +7,7 @@ const intervalDays = 30; // set the number of days between script runs if runOnl
 
 const daysSinceLastActive = 90; //set this to the maximum number of days since last access that a member can have to be considered for an Enterprise seat. Seats will be given to users who have been since the las X days. 
 // set the batch count to be retrieved in each batch. The default value is 5.
-const batchCount = 5;
+const batchCount = 50;
 
 const testRun = true // if this value is set to true, the script will simulate deactivating inactive users but will not actually deactivate them. Set to false if you would like to actually deactivate users. 
 
@@ -71,7 +71,7 @@ function putTogetherReport() {
   });
 
   // API endpoint to get list of Free Members
-  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
   async function processNextBatch(startIndex) {
     return new Promise(async (resolve, reject) => {
@@ -150,6 +150,7 @@ async function beginDeactivatingUsers() {
     }
 
     const apiRequests = pre_rows.map((pre_row, i) => async () => {
+        return new Promise(async (resolve, reject) => {
         const cols = pre_row.split(",");
         const email = cols[0];
         const memberId = cols[1].trim();
@@ -161,7 +162,7 @@ async function beginDeactivatingUsers() {
 
         if (daysActive > daysSinceLastActive) {
             if (!testRun) {
-                const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
+                const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
                 const data = { memberId: memberId };
 
                 // This is the wrapped request logic with retries
@@ -171,31 +172,51 @@ async function beginDeactivatingUsers() {
                         headers: headers,
                         form: data,
                         json: true
-                    });
+                    }, (error, response, body)=>{
+                        if (response.statusCode !== 200) {
+                            throw new Error(`Failed to deactivate user: ${resp.body}`);
+                        } else {
+                            console.log(`Deactivated user ${email}`)
+                            let removedFromEnterprise = "No"
+                            if (removeFromEnterprise) {
+                                const removeFromEnterpriseUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/?key=${apiKey}&token=${apiToken}`;
+                                const res =  request.delete({
+                                    url: removeFromEnterpriseUrl,
+                                    headers: headers,
+                                    form: data,
+                                    json: true
+                                }, (error, response, body)=>{
+                                    if (response.statusCode !== 200) {
+                                        throw new Error(`Failed to remove user from enterprise: ${res.body}`);
+                                    } else {
+                                        console.log(`Removed user from enterprise: ${email}`);
+                                        removedFromEnterprise = "Yes";
+                                        const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes', removedFromEnterprise];
+                                        fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+                                    }
 
-                    // Check if the request was successful
-                    if (resp.statusCode !== 200) {
-                        throw new Error(`Failed to deactivate user: ${resp.body}`);
-                    }
-                    
-                    // Logic to remove the user from the enterprise if required
-                    if (removeFromEnterprise) {
-                        const removeFromEnterpriseUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/?key=${apiKey}&token=${apiToken}`;
-                        const res = await request.delete({
-                            url: removeFromEnterpriseUrl,
-                            headers: headers,
-                            form: data,
-                            json: true
-                        });
-
-                        if (res.statusCode !== 200) {
-                            throw new Error(`Failed to remove user from enterprise: ${res.body}`);
+                                }
+                                
+                                );
+    
+                            } else {
+                                const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes', "No"];
+              fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+                            }
                         }
                     }
+                    
+                    );
+                    
                 }, MAX_RETRIES);
             }
-        }
+        } else {
+            const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
+            fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+          }
     });
+    });
+
 
     try {
         await Promise.all(apiRequests.map(fn => fn()));
@@ -219,4 +240,5 @@ if (runOnlyOnce) {
   // run the job once on startup
   putTogetherReport();
 }
+
 
