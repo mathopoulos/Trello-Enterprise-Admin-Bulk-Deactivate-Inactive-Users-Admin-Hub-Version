@@ -68,7 +68,7 @@ function putTogetherReport() {
   });
 
   // API endpoint to get list of Free Members
-  let getManagedMembersUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
+  let getManagedMembersUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members?fields=idEnterprisesDeactivated,fullName,memberEmail,username,dateLastAccessed&associationTypes=licensed&key=${apiKey}&token=${apiToken}&count=${batchCount}}`;
 
   // Function to pull the next set of users 
   async function processNextBatch(startIndex) {
@@ -168,7 +168,7 @@ async function beginGivingSeats() {
 
           const requestFn = () => new Promise((resolve, reject) => {
               if (isEligible === "Yes") {
-                const giveEnterpriseSeatUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
+                const giveEnterpriseSeatUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/licensed?key=${apiKey}&token=${apiToken}&value=false`;
                 const data = { memberId: memberId };
 
                   request.put({
@@ -184,7 +184,7 @@ async function beginGivingSeats() {
                           console.log(`Deactivated member: ${fullName} with email ${email}`)
                           let removedFromEnterprise = "No";
                           if(removeFromEnterprise) {
-                            const removeFromEnterpriseUrl = `https://trellis.coffee/1/enterprises/${enterpriseId}/members/${memberId}/?key=${apiKey}&token=${apiToken}`;
+                            const removeFromEnterpriseUrl = `https://api.trello.com/1/enterprises/${enterpriseId}/members/${memberId}/?key=${apiKey}&token=${apiToken}`;
                             request.delete({
                                 url: removeFromEnterpriseUrl,
                                 headers: headers,
