@@ -97,7 +97,7 @@ function putTogetherReport() {
                     if (testRun === false) {
                         console.log(`All members have been added to the report. See member_report_${timestamp}.csv in your directory. Now going to start deactivating inactive users...`);
                         
-                        await beginGivingSeats();
+                        await beginTakingAwaySeats();
                     } else {
                         console.log(`Test run complete! All members have been added to the report. See member_report_${timestamp}.csv in your directory`);
                     }
@@ -138,7 +138,7 @@ processNextBatch(1);
 }
               
 // Function that actually gives eligiable users an enterprise seat or re-activates them. 
-async function beginGivingSeats() {
+async function beginTakingAwaySeats() {
   const post_timestamp = moment().format("YYYY-MM-DD-HHmmss");
   
   const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Deactivation', 'Deactivated', 'Removed From Enterprise']];
