@@ -9,10 +9,9 @@ const daysSinceLastActive = 90; //seats will be given to users who have been sin
 
 const batchCount = 50; // the number of users that will be retrieved with each call. The default value is 50. We recommend not increasing this number (to avoid rate limiting)
 
-const testRun = True // if this value is set to true, the script will simulate giving seats to active members but will not actually give them seats. Set to false if you would like to actually give users enterprise seats. 
+const testRun = True // if this value is set to true, the script will simulate removing product access from inactive members but will not actually take away access. Set to false if you would like to actually take away product access. 
 
-const trelloGroupId = 'Insert Trello Group ID' // The Trello Product Access group that if a user is in they will be given an Enterprise License/product access. 
-
+const trelloGroupId = 'Insert Trello Group ID' // The Trello Product Access group that determines whether a user has Trello product access. This is the group the user will be removed from. 
 
 //------------------------------------------------------------------------------------------------------------
 //REQUIRED authintication credentials
@@ -59,7 +58,7 @@ async function withRetry(fn, maxRetries) {
   throw error;
 }
 
-// Function to put together pre-report and then kickoff functions to give/reactivate eligiable users. 
+// Function to put together pre-report and then kickoff functions to remove eligible users. 
 function putTogetherReport() {
   //creates csv file where where report will be test/pre run user report will be stored 
   const csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Trello Access','Days Since Last Active', 'Last Active', 'Eligible For Deactivation']];
@@ -163,7 +162,7 @@ processNextBatch(getManagedMembersUrl);
 
 }
               
-// Function that actually gives eligiable users an enterprise seat or re-activates them. 
+// Function that actually remove product access. 
 async function beginTakingAwaySeats() {
     const post_timestamp = moment().format("YYYY-MM-DD-HHmmss");
     const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Removal', 'Removed']];
