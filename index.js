@@ -99,9 +99,7 @@ function putTogetherReport() {
                 }
 
                 const membersResponse = body.data;
-                console.log (membersResponse);
                 let nextUrl = body.links.next
-                console.log (nextUrl);
                 pulledBatches = pulledBatches + 1;
                 console.log(`Pulled batch #${pulledBatches} with ${membersResponse.length} members. Adding them to the list of users...`);
 
@@ -167,82 +165,85 @@ processNextBatch(getManagedMembersUrl);
               
 // Function that actually gives eligiable users an enterprise seat or re-activates them. 
 async function beginTakingAwaySeats() {
-  const post_timestamp = moment().format("YYYY-MM-DD-HHmmss");
-  
-  const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Removal', 'Removed']];
-  let pre_rows; 
-  try {
+    const post_timestamp = moment().format("YYYY-MM-DD-HHmmss");
+    const post_csvHeaders = [['Member Email', 'Member ID', 'Member Full Name', 'Days Since Last Active', 'Last Active', 'Eligible For Removal', 'Removed']];
+    let pre_rows;
+    try {
       fs.writeFileSync(`post_run_member_report_${post_timestamp}.csv`, '');
       post_csvHeaders.forEach((header) => {
-          fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, header.join(', ') + '\r\n');
+        fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, header.join(', ') + '\r\n');
       });
-      
+  
       const pre_csvData = fs.readFileSync(`pre_run_member_report_${timestamp}.csv`, "utf-8");
       pre_rows = pre_csvData.trim().split(/\r?\n/);
-  } catch (err) {
+    } catch (err) {
       console.error('Error while reading or writing CSV:', err);
       throw err;
-  }
-
-  const apiRequests = pre_rows.map((pre_row, i) => {
-      return new Promise(async (resolve, reject) => {
-          const cols = pre_row.split(",");
-          const email = cols[0];
-          const memberId = cols[1].trim();
-          const daysActive = parseInt(cols[4]);
-          const fullName = cols[2];
-          const lastAccessed = cols[5];
-          const isEligible = cols[6].trim();
-
-          const requestFn = () => new Promise((resolve, reject) => {
-              if (isEligible === "Yes") {
-                const giveEnterpriseSeatUrl = `https://api.atlassian.com/admin/v1/orgs/${orgId}/directory/groups/${trelloGroupId}/memberships/${memberId}`;
-
-                  request.delete({
-                      url: giveEnterpriseSeatUrl,
-                      headers: {
-                        'Authorization': `Bearer ${atlassianApiKey}`,
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                      },
-                  }, (error, response, body) => {
-                      if (error) {
-                          return reject(error);
-                      }
-
-                      if (response.statusCode === 200) {
-                          console.log(`Removed member: ${fullName} with email ${email} from Trello Product Access Group`)
-                          const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
-                        fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
-                          resolve();
-                      } else {
-                          reject(new Error(body || `HTTP Error: ${response.statusCode}`));
-                      }
-                  });
-              }  else {
-                  const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
-                  fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
-                  resolve();
-              }
-          });
-
-          try {
-              await withRetry(requestFn, MAX_RETRIES);
-          } catch (err) {
-              console.error(`Failed to process ${email} after ${MAX_RETRIES} retries. Error: ${err.message}`);
+    }
+  
+    async function deleteMemberWithDelay(email, memberId, fullName, daysActive, lastAccessed, isEligible) {
+      return new Promise((resolve, reject) => {
+        const deleteUrl = `https://api.atlassian.com/admin/v1/orgs/${orgId}/directory/groups/${trelloGroupId}/memberships/${memberId}`;
+        request.delete({
+          url: deleteUrl,
+          headers: {
+            'Authorization': `Bearer ${atlassianApiKey}`,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+        }, (error, response, body) => {
+          if (error) {
+            return reject(error);
           }
-
-          resolve();
+  
+          if (response.statusCode === 200) {
+            console.log(`Removed member: ${fullName} with email ${email} from Trello Product Access Group`)
+            const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'Yes'];
+            fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+            resolve();
+          } else {
+            reject(new Error(body || `HTTP Error: ${response.statusCode}`));
+          }
+        });
       });
-  });
-
-  try {
+    }
+  
+    const apiRequests = pre_rows.map((pre_row, i) => {
+      return new Promise(async (resolve, reject) => {
+        const cols = pre_row.split(",");
+        const email = cols[0];
+        const memberId = cols[1].trim();
+        const daysActive = parseInt(cols[4]);
+        const fullName = cols[2];
+        const lastAccessed = cols[5];
+        const isEligible = cols[6].trim();
+  
+        try {
+          if (isEligible === "Yes") {
+            await deleteMemberWithDelay(email, memberId, fullName, daysActive, lastAccessed, isEligible);
+            // Add a delay after each delete API call (e.g., 1 second)
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          } else {
+            const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
+            fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+          }
+          resolve();
+        } catch (err) {
+        const rowData = [email, memberId, fullName, daysActive, lastAccessed, isEligible, 'No'];
+        fs.appendFileSync(`post_run_member_report_${post_timestamp}.csv`, rowData.join(', ') + '\r\n');
+          console.error(`Failed to process ${email} after ${MAX_RETRIES} retries. Error: ${err.message}`);
+          reject(err);
+        }
+      });
+    });
+  
+    try {
       await Promise.all(apiRequests);
       //console.log(`All done! Deactivated all inactive users! You can find the results in post_run_member_report_${post_timestamp}.csv.`);
-  } catch (err) {
-      console.error('Some errors occurred while processing members:', err);
-  }
-};
+    } catch (err) {
+      //console.error('Some errors occurred while processing members:', err);
+    }
+  };
 
 // run the job once if runOnlyOnce is true, otherwise schedule it to run every X days
 if (runOnlyOnce) {
